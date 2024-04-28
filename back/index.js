@@ -17,6 +17,8 @@ let players = {};
 
 io.on("connection", (socket) => {
   console.log("A user connected", socket.id);
+  io.emit("list games", Object.values(games));
+  console.log(Object.values(games));
 
   // Create a new room with a name
   socket.on("create game", ({ playerName, gameName }) => {
@@ -25,8 +27,11 @@ io.on("connection", (socket) => {
       return;
     }
 
-    const games = Array.from(socket.rooms);
-    if (games.length > 1) {
+    const playerGames = Array.from(socket.rooms).filter(
+      (room) => room !== socket.id
+    );
+
+    if (games.length > 0) {
       socket.emit("error", "You are already in a game.");
       return;
     }
@@ -40,7 +45,7 @@ io.on("connection", (socket) => {
     socket.join(gameId);
     // socket.emit("game created", gameId);
     socket.emit("join game", { gameId });
-    io.emit("list games", Object.values(games));
+    io.emit("list games", games);
     console.log("Game created", games[gameId]);
   });
 

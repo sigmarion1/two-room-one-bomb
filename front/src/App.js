@@ -2,30 +2,15 @@ import React from 'react';
 import { useEffect, useState } from 'react';
 import {
   Box,
-  Text,
-  Link,
-  VStack,
-  Code,
-  Grid,
-  theme,
   Button,
   Heading,
   SimpleGrid,
   Flex,
   Container,
-  Input,
   useDisclosure,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalFooter,
-  ModalBody,
-  ModalCloseButton,
-  FormControl,
-  FormLabel,
 } from '@chakra-ui/react';
 import io from 'socket.io-client';
+import GameModal from './components/GameModal';
 
 const socketUrl = process.env.REACT_APP_SOCKET_URL;
 const socket = socketUrl ? io(socketUrl) : io();
@@ -34,28 +19,41 @@ function App() {
   const [playerName, setPlayerName] = useState('');
   const [gameName, setGameName] = useState('');
   const [joinedGame, setJoinedGame] = useState(null);
+  const [gameList, setGameList] = useState([]);
+
+  const [modalMode, setModalMode] = useState('create');
+  const [selectedGameId, setSelectedGameId] = useState(null);
 
   const { isOpen, onOpen, onClose } = useDisclosure();
 
-  const [players, setPlayers] = useState([]);
-  const rooms = ['Room 1', 'Room 2', 'Room 3', 'Room 4'];
-
-  // const handleJoinRoom = () => {
-  //   if (name.trim() !== '' && selectedRoom === '') {
-  //     socket.connect();
-  //     socket.emit('join room', { name, room: selectedRoom });
-  //   } else {
-  //     alert('Please enter your name and select a room');
-  //   }
-  // };
-
-  const handleCreateGame = () => {
-    if (playerName.trim() === '' || gameName.trim() === '') {
-      alert('Both fields are required');
+  const handleModalopen = (mode, gameId) => {
+    if (mode === 'create') {
+      setModalMode('create');
+    } else if (mode === 'join') {
+      setModalMode('join');
+      setSelectedGameId(gameId);
+    } else {
       return;
     }
-    socket.emit('create game', { playerName, gameName });
+
+    onOpen();
   };
+
+  const handleSubmit = () => {
+    if (modalMode === 'create') {
+      socket.emit('create game', { playerName, gameName });
+    } else if (modalMode === 'join') {
+      socket.emit('join game', { playerName, selectedGameId });
+    } else {
+      return;
+    }
+
+    onClose();
+  };
+
+  useEffect(() => {
+    console.log(gameList); // Now it logs the updated state whenever it changes
+  }, [gameList]); // Dependency array, useEffect will run when gameList changes
 
   useEffect(() => {
     socket.on('connect', () => {
@@ -70,12 +68,12 @@ function App() {
       setJoinedGame(null);
     });
 
-    socket.on('list games', games => {
-      console.log(games);
+    socket.on('list games', receviedGames => {
+      setGameList(receviedGames);
     });
 
     socket.on('game started', players => {
-      setPlayers(players);
+      // setPlayers(players);
     });
 
     socket.on('game info', gameInfo => {
@@ -96,67 +94,38 @@ function App() {
                 <Button
                   colorScheme="red"
                   variant="solid"
-                  onClick={onOpen}
+                  onClick={() => handleModalopen('create')}
                   flex={true}
                 >
                   Create Game
                 </Button>
-                {/* <Input
-                placeholder="Enter your name"
-                value={playerName}
-                onChange={e => setPlayerName(e.target.value.slice(0, 10))}
-              ></Input> */}
-
-                {/* {rooms.map(room => (
-              <Button
-                key={room}
-                colorScheme="red"
-                variant="solid"
-                onClick={() => handleJoinRoom(room.id)}
-                flex={true}
-              >
-                {room}
-              </Button>
-            ))} */}
+                {gameList.map(game => (
+                  <Button
+                    key={game.id}
+                    colorScheme="red"
+                    variant="solid"
+                    onClick={() => handleModalopen('join', game.id)}
+                    flex={true}
+                  >
+                    {game.name}
+                  </Button>
+                ))}
               </SimpleGrid>
+
+              <GameModal
+                isOpen={isOpen}
+                onClose={onClose}
+                modalMode={modalMode}
+                playerName={playerName}
+                setPlayerName={setPlayerName}
+                gameName={gameName}
+                setGameName={setGameName}
+                onSubmit={handleSubmit}
+              />
             </Box>
           )}
         </Container>
       </Flex>
-
-      <Modal isOpen={isOpen} onClose={onClose}>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Create your account</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody pb={6}>
-            <FormControl>
-              <FormLabel>Player name</FormLabel>
-              <Input
-                placeholder="Player name"
-                value={playerName}
-                onChange={e => setPlayerName(e.target.value.slice(0, 10))}
-              />
-            </FormControl>
-
-            <FormControl mt={4}>
-              <FormLabel>Game name</FormLabel>
-              <Input
-                placeholder="Game name"
-                value={gameName}
-                onChange={e => setGameName(e.target.value.slice(0, 10))}
-              />
-            </FormControl>
-          </ModalBody>
-
-          <ModalFooter>
-            <Button colorScheme="red" mr={3} onClick={handleCreateGame}>
-              Create
-            </Button>
-            <Button onClick={onClose}>Cancel</Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
     </>
   );
 }
