@@ -2,6 +2,7 @@ const express = require("express");
 const http = require("http");
 const { v4: uuidv4 } = require("uuid");
 const socketIo = require("socket.io");
+const roleText = require("./roleText");
 
 const app = express();
 const server = http.createServer(app);
@@ -69,17 +70,45 @@ function revailRole(gameId) {
   }
 
   players.forEach((player) => {
-    io.to(player.id).emit("revail role", { role: player.role });
+    const role = player.role;
+    let additionalInfo = "";
+
+    if (role === "President") {
+      const fbiPlayer = players.find((player) => player.role === "FBI");
+
+      if (fbiPlayer) {
+        additionalInfo = "***** Your FBI is " + fbiPlayer.name + "*****";
+      }
+    } else if (role === "Collaborator") {
+      const terroristPlayer = players.find(
+        (player) => player.role === "Terrorist"
+      );
+
+      if (terroristPlayer) {
+        additionalInfo =
+          "***** The Terrorist is " + terroristPlayer.name + "*****";
+      }
+    }
+
+    const roleInfo = {
+      role,
+      text: roleText[role].text + " " + additionalInfo,
+      color: roleText[role].color,
+    };
+
+    io.to(player.id).emit("revail role", roleInfo);
   });
 
   const shuffledRoles = shuffleArray(roles.slice(0, players.length));
 
-  playersWithRole[gameId] = [];
+  if (playersWithRole[gameId] === undefined) {
+    playersWithRole[gameId] = [];
 
-  players.forEach((player, index) => {
-    const role = shuffledRoles[index];
-    playersWithRole[gameId].push({ ...player, role });
-  });
+    players.forEach((player, index) => {
+      const role = shuffledRoles[index];
+      playersWithRole[gameId].push({ ...player, role });
+    });
+  }
 }
 
 io.on("connection", (socket) => {

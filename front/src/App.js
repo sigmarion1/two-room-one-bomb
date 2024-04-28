@@ -63,14 +63,15 @@ function App() {
 
     socket.on('left game', () => {
       setJoinedGame(null);
+      setMyRole(null);
     });
 
     socket.on('list games', receviedGames => {
       setGameList(receviedGames);
     });
 
-    socket.on('revail role', ({ role }) => {
-      setMyRole(role);
+    socket.on('revail role', roleInfo => {
+      setMyRole(roleInfo);
     });
 
     socket.on('game info', gameInfo => {
@@ -90,17 +91,17 @@ function App() {
   return (
     <>
       <Flex minH="100vh" justify="center" bgColor={'red.600'}>
-        <Container boxShadow={'xl'} p={4} rounded={'xl'} bgColor={'white'}>
+        <Container boxShadow={'xl'} p={2} rounded={'xl'} bgColor={'white'}>
           <Image src="/logo.png" alt="logo" />
           {currentGame && (
             <Box textAlign="center" fontSize="xl">
               <SimpleGrid columns={1} spacing={4} padding={5}>
                 <Container
-                  bgColor="white"
+                  bgColor="red.600"
                   rounded={'5px'}
                   border={'2px'}
                   borderColor={'red.600'}
-                  textColor={'red.600'}
+                  textColor={'white'}
                   p="2px"
                 >
                   {currentGame.name}
@@ -112,17 +113,49 @@ function App() {
                 {myRole && (
                   <>
                     <Container
-                      bgColor="white"
                       rounded={'5px'}
                       border={'2px'}
                       borderColor={'red.600'}
-                      textColor={'red.600'}
                       p="2px"
-                      pb="100px"
+                      minH="500px"
+                      textAlign={'center'}
                     >
-                      Your Role: {myRole}
+                      <b>CAUTION</b> <br /> Do not share this information with
+                      other players
                     </Container>
-                    <Image src="/President.png" alt="logo" />
+                    <Container
+                      bgColor={
+                        myRole.color === 'grey'
+                          ? 'black'
+                          : myRole.color + '.600'
+                      }
+                      rounded={'5px'}
+                      textColor={'white'}
+                      p="2px"
+                    >
+                      Your Role: {myRole.role}
+                    </Container>
+                    <Box textAlign="center">
+                      <Image
+                        display={'inline-block'}
+                        src={'/' + myRole.role.toLowerCase() + '.png'}
+                        alt={myRole.role}
+                        objectFit="cover"
+                        borderRadius="full"
+                      />
+                    </Box>
+                    <Container
+                      bgColor={
+                        myRole.color === 'grey'
+                          ? 'black'
+                          : myRole.color + '.600'
+                      }
+                      rounded={'5px'}
+                      textColor={'white'}
+                      p="2px"
+                    >
+                      {myRole.text}
+                    </Container>
                   </>
                 )}
 
@@ -138,12 +171,12 @@ function App() {
                     Distribute Roles
                   </Button>
                 )}
-
+                {/* 
                 {currentplayer?.isAdmin && (
                   <Button variant="solid" colorScheme="red" flex={true}>
                     View Roles (Open for All Players)
                   </Button>
-                )}
+                )} */}
 
                 {!currentplayer?.isAdmin && !myRole && (
                   <Button
