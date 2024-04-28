@@ -52,7 +52,7 @@ function GameModal({
           )}
         </ModalBody>
         <ModalFooter>
-          <Button colorScheme="blue" mr={3} onClick={() => onSubmit()}>
+          <Button colorScheme="red" mr={3} onClick={() => onSubmit()}>
             {modalMode === 'create' ? 'Create' : 'Join'}
           </Button>
           <Button onClick={onClose}>Cancel</Button>

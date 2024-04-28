@@ -8,9 +8,14 @@ import {
   Flex,
   Container,
   useDisclosure,
+  Image,
+  Text,
+  Badge,
 } from '@chakra-ui/react';
 import io from 'socket.io-client';
+import Avatar, { genConfig } from 'react-nice-avatar';
 import GameModal from './components/GameModal';
+import PlayerListItem from './components/PlayerListItem';
 
 const socketUrl = process.env.REACT_APP_SOCKET_URL;
 const socket = socketUrl ? io(socketUrl) : io();
@@ -26,15 +31,9 @@ function App() {
 
   const { isOpen, onOpen, onClose } = useDisclosure();
 
-  const handleModalopen = (mode, gameId) => {
-    if (mode === 'create') {
-      setModalMode('create');
-    } else if (mode === 'join') {
-      setModalMode('join');
-      setSelectedGameId(gameId);
-    } else {
-      return;
-    }
+  const handleModalopen = (mode, gameId = null) => {
+    setModalMode(mode);
+    setSelectedGameId(gameId);
 
     onOpen();
   };
@@ -43,7 +42,7 @@ function App() {
     if (modalMode === 'create') {
       socket.emit('create game', { playerName, gameName });
     } else if (modalMode === 'join') {
-      socket.emit('join game', { playerName, selectedGameId });
+      socket.emit('join game', { playerName, gameId: selectedGameId });
     } else {
       return;
     }
@@ -79,18 +78,64 @@ function App() {
     socket.on('game info', gameInfo => {
       console.log(gameInfo);
     });
+
+    socket.on('error', error => {
+      alert(error);
+    });
   }, []);
+
+  const curretGame = gameList.find(game => game.id === joinedGame);
 
   return (
     <>
-      <Flex minH="100vh" justify="center">
-        <Container boxShadow={'xl'} p={10} rounded={'md'}>
-          {joinedGame ? (
-            <div>게임화면</div>
+      <Flex minH="100vh" justify="center" bgColor={'red.600'}>
+        <Container boxShadow={'xl'} p={4} rounded={'xl'} bgColor={'white'}>
+          <Image src="/logo.png" alt="logo" />
+          {curretGame ? (
+            <Box textAlign="center" fontSize="xl">
+              <SimpleGrid columns={1} spacing={4} padding={5}>
+                <Container
+                  bgColor="white"
+                  rounded={'5px'}
+                  border={'2px'}
+                  borderColor={'red.600'}
+                  textColor={'red.600'}
+                  p="2px"
+                >
+                  {curretGame.name}
+                </Container>
+
+                {curretGame.players.map((player, i) => (
+                  <PlayerListItem player={player} key={player.id} index={i} />
+                ))}
+                <Button variant="solid" colorScheme="red" flex={true}>
+                  Start Game
+                </Button>
+                <Button variant="solid" flex={true}>
+                  Leave Game
+                </Button>
+                <Button
+                  isLoading
+                  variant="solid"
+                  colorScheme="red"
+                  flex={true}
+                  loadingText="Waiting for players..."
+                ></Button>
+              </SimpleGrid>
+            </Box>
           ) : (
             <Box textAlign="center" fontSize="xl">
-              <Heading mb={4}>Choose a Game</Heading>
-              <SimpleGrid columns={1} spacing={5} padding={5}>
+              <SimpleGrid columns={1} spacing={4} padding={5}>
+                {gameList.map(game => (
+                  <Button
+                    key={game.id}
+                    variant="solid"
+                    onClick={() => handleModalopen('join', game.id)}
+                    flex={true}
+                  >
+                    {game.name} - [{game.players.length}/24]
+                  </Button>
+                ))}
                 <Button
                   colorScheme="red"
                   variant="solid"
@@ -99,17 +144,6 @@ function App() {
                 >
                   Create Game
                 </Button>
-                {gameList.map(game => (
-                  <Button
-                    key={game.id}
-                    colorScheme="red"
-                    variant="solid"
-                    onClick={() => handleModalopen('join', game.id)}
-                    flex={true}
-                  >
-                    {game.name}
-                  </Button>
-                ))}
               </SimpleGrid>
 
               <GameModal

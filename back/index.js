@@ -13,12 +13,54 @@ const io = socketIo(server, {
 });
 
 let games = {};
-let players = {};
+let playersWithRole = {};
+
+const roles = [
+  "President",
+  "Terrorist",
+  "FBI",
+  "Collaborator",
+  "King",
+  "Resident",
+  "Blue",
+  "Red",
+  "Blue",
+  "Red",
+  "Blue",
+  "Red",
+  "Blue",
+  "Red",
+  "Blue",
+  "Red",
+  "Blue",
+  "Red",
+  "Blue",
+  "Red",
+  "Blue",
+  "Red",
+  "Blue",
+  "Red",
+];
+
+function shuffleArray(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+
+function assignRoles(players, gameId) {
+  const shuffledRoles = shuffleArray(roles.slice(0, players.length));
+
+  players.forEach((player, index) => {
+    player.role = shuffledRoles[index];
+  });
+}
 
 io.on("connection", (socket) => {
   console.log("A user connected", socket.id);
   io.emit("list games", Object.values(games));
-  console.log(Object.values(games));
 
   // Create a new room with a name
   socket.on("create game", ({ playerName, gameName }) => {
@@ -31,7 +73,7 @@ io.on("connection", (socket) => {
       (room) => room !== socket.id
     );
 
-    if (games.length > 0) {
+    if (playerGames.length > 0) {
       socket.emit("error", "You are already in a game.");
       return;
     }
@@ -45,49 +87,92 @@ io.on("connection", (socket) => {
     socket.join(gameId);
     // socket.emit("game created", gameId);
     socket.emit("join game", { gameId });
-    io.emit("list games", games);
+    io.emit("list games", Object.values(games));
     console.log("Game created", games[gameId]);
   });
 
   // Join an existing room with player name
-  socket.on("join game", ({ gameId, playerName }) => {
+  socket.on("join game", ({ playerName, gameId }) => {
     if (!playerName.trim()) {
       socket.emit("error", "Player name is required.");
       return;
     }
 
-    const game = games[gameId];
-    if (game) {
-      game.players.push({ id: socket.id, name: playerName });
-      socket.join(gameId);
-      io.emit("list games", Object.values(games));
-    } else {
-      socket.emit("error", "Game does not exist");
+    const playerGames = Array.from(socket.rooms).filter(
+      (room) => room !== socket.id
+    );
+
+    if (playerGames.length > 0) {
+      socket.emit("error", "You are already in a game.");
+      return;
     }
+
+    const game = games[gameId];
+
+    if (game === undefined) {
+      socket.emit("error", "Game does not exist.");
+      return;
+    }
+
+    const playerNameList = game.players.map((player) => player.name);
+
+    if (playerNameList.includes(playerName)) {
+      socket.emit("error", "Player name already exists in the game.");
+      return;
+    }
+
+    game.players.push({ id: socket.id, name: playerName, isAdmin: false });
+    socket.join(gameId);
+    socket.emit("join game", { gameId });
+    io.emit("list games", Object.values(games));
   });
 
   socket.on("leave game", (gameId) => {
     let game = games[gameId];
-    if (game) {
-      game.players = game.players.filter((player) => player.id !== socket.id);
-      socket.leave(gameId);
-      // io.to(gameId).emit("update game", game); // Notify remaining players in the room
-      if (game.players.length === 0) {
-        delete games[gameId]; // Delete the room if no players are left
-      }
-      io.emit("list games", Object.values(games)); // Update the room list globally
+
+    if (game === undefined) {
+      return;
     }
+
+    player = game.players.find((player) => player.id === socket.id);
+
+    const wasAdmin = player.isAdmin;
+
+    game.players = game.players.filter((player) => player.id !== socket.id);
+    socket.leave(gameId);
+
+    if (game.players.length === 0) {
+      delete games[gameId];
+    } else if (wasAdmin) {
+      game.players[0].isAdmin = true;
+    }
+
+    io.emit("list games", Object.values(games));
   });
 
   // Handle disconnection and remove empty rooms
   socket.on("disconnect", () => {
-    Object.keys(games).forEach((gameId) => {
-      let game = games[gameId];
-      game.players = game.players.filter((player) => player.id !== socket.id);
-      if (game.players.length === 0) {
-        delete games[gameId];
-      }
+    const game = Object.values(games).find((game) => {
+      return game.players.find((player) => player.id === socket.id);
     });
+
+    if (game === undefined) {
+      return;
+    }
+
+    player = game.players.find((player) => player.id === socket.id);
+
+    const wasAdmin = player.isAdmin;
+
+    game.players = game.players.filter((player) => player.id !== socket.id);
+    socket.leave(game.id);
+
+    if (game.players.length === 0) {
+      delete games[game.id];
+    } else if (wasAdmin) {
+      game.players[0].isAdmin = true;
+    }
+
     io.emit("list games", Object.values(games));
   });
 });
