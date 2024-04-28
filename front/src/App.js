@@ -3,17 +3,13 @@ import { useEffect, useState } from 'react';
 import {
   Box,
   Button,
-  Heading,
   SimpleGrid,
   Flex,
   Container,
   useDisclosure,
   Image,
-  Text,
-  Badge,
 } from '@chakra-ui/react';
 import io from 'socket.io-client';
-import Avatar, { genConfig } from 'react-nice-avatar';
 import GameModal from './components/GameModal';
 import PlayerListItem from './components/PlayerListItem';
 
@@ -84,14 +80,17 @@ function App() {
     });
   }, []);
 
-  const curretGame = gameList.find(game => game.id === joinedGame);
+  const currentGame = gameList.find(game => game.id === joinedGame);
+  const currentplayer = currentGame?.players.find(
+    player => player.id === socket.id
+  );
 
   return (
     <>
       <Flex minH="100vh" justify="center" bgColor={'red.600'}>
         <Container boxShadow={'xl'} p={4} rounded={'xl'} bgColor={'white'}>
           <Image src="/logo.png" alt="logo" />
-          {curretGame ? (
+          {currentGame && (
             <Box textAlign="center" fontSize="xl">
               <SimpleGrid columns={1} spacing={4} padding={5}>
                 <Container
@@ -102,28 +101,42 @@ function App() {
                   textColor={'red.600'}
                   p="2px"
                 >
-                  {curretGame.name}
+                  {currentGame.name}
                 </Container>
 
-                {curretGame.players.map((player, i) => (
+                {currentGame.players.map((player, i) => (
                   <PlayerListItem player={player} key={player.id} index={i} />
                 ))}
-                <Button variant="solid" colorScheme="red" flex={true}>
-                  Start Game
-                </Button>
-                <Button variant="solid" flex={true}>
+                {currentplayer?.isAdmin && (
+                  <Button variant="solid" colorScheme="red" flex={true}>
+                    Start Game
+                  </Button>
+                )}
+
+                {!currentplayer?.isAdmin && (
+                  <Button
+                    isLoading
+                    variant="solid"
+                    colorScheme="red"
+                    flex={true}
+                    loadingText="Waiting for players..."
+                  ></Button>
+                )}
+
+                <Button
+                  variant="solid"
+                  flex={true}
+                  onClick={() =>
+                    socket.emit('leave game', { gameId: joinedGame })
+                  }
+                >
                   Leave Game
                 </Button>
-                <Button
-                  isLoading
-                  variant="solid"
-                  colorScheme="red"
-                  flex={true}
-                  loadingText="Waiting for players..."
-                ></Button>
               </SimpleGrid>
             </Box>
-          ) : (
+          )}
+
+          {!joinedGame && (
             <Box textAlign="center" fontSize="xl">
               <SimpleGrid columns={1} spacing={4} padding={5}>
                 {gameList.map(game => (

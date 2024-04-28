@@ -127,14 +127,18 @@ io.on("connection", (socket) => {
     io.emit("list games", Object.values(games));
   });
 
-  socket.on("leave game", (gameId) => {
+  socket.on("leave game", ({ gameId }) => {
     let game = games[gameId];
 
     if (game === undefined) {
       return;
     }
 
-    player = game.players.find((player) => player.id === socket.id);
+    const player = game.players.find((player) => player.id === socket.id);
+
+    if (player === undefined) {
+      return;
+    }
 
     const wasAdmin = player.isAdmin;
 
@@ -147,7 +151,23 @@ io.on("connection", (socket) => {
       game.players[0].isAdmin = true;
     }
 
+    socket.emit("left game");
     io.emit("list games", Object.values(games));
+  });
+
+  socket.on("start game", ({ gameId }) => {
+    if (!games[gameId]) {
+      return;
+    }
+
+    const player = games[gameId].players.find(
+      (player) => player.id === socket.id
+    );
+    if (!player.isAdmin) {
+      return;
+    }
+
+    assignRoles(games[gameId].players, gameId);
   });
 
   // Handle disconnection and remove empty rooms
