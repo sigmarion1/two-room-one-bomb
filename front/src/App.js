@@ -25,6 +25,8 @@ function App() {
   const [modalMode, setModalMode] = useState('create');
   const [selectedGameId, setSelectedGameId] = useState(null);
 
+  const [myRole, setMyRole] = useState(null);
+
   const { isOpen, onOpen, onClose } = useDisclosure();
 
   const handleModalopen = (mode, gameId = null) => {
@@ -67,8 +69,8 @@ function App() {
       setGameList(receviedGames);
     });
 
-    socket.on('game started', players => {
-      // setPlayers(players);
+    socket.on('revail role', ({ role }) => {
+      setMyRole(role);
     });
 
     socket.on('game info', gameInfo => {
@@ -107,13 +109,43 @@ function App() {
                 {currentGame.players.map((player, i) => (
                   <PlayerListItem player={player} key={player.id} index={i} />
                 ))}
+                {myRole && (
+                  <>
+                    <Container
+                      bgColor="white"
+                      rounded={'5px'}
+                      border={'2px'}
+                      borderColor={'red.600'}
+                      textColor={'red.600'}
+                      p="2px"
+                      pb="100px"
+                    >
+                      Your Role: {myRole}
+                    </Container>
+                    <Image src="/President.png" alt="logo" />
+                  </>
+                )}
+
                 {currentplayer?.isAdmin && (
-                  <Button variant="solid" colorScheme="red" flex={true}>
-                    Start Game
+                  <Button
+                    variant="solid"
+                    colorScheme="red"
+                    flex={true}
+                    onClick={() =>
+                      socket.emit('distribute roles', { gameId: joinedGame })
+                    }
+                  >
+                    Distribute Roles
                   </Button>
                 )}
 
-                {!currentplayer?.isAdmin && (
+                {currentplayer?.isAdmin && (
+                  <Button variant="solid" colorScheme="red" flex={true}>
+                    View Roles (Open for All Players)
+                  </Button>
+                )}
+
+                {!currentplayer?.isAdmin && !myRole && (
                   <Button
                     isLoading
                     variant="solid"

@@ -53,8 +53,32 @@ function shuffleArray(array) {
 function assignRoles(players, gameId) {
   const shuffledRoles = shuffleArray(roles.slice(0, players.length));
 
+  playersWithRole[gameId] = [];
+
   players.forEach((player, index) => {
-    player.role = shuffledRoles[index];
+    const role = shuffledRoles[index];
+    playersWithRole[gameId].push({ ...player, role });
+  });
+}
+
+function revailRole(gameId) {
+  const players = playersWithRole[gameId];
+
+  if (players === undefined) {
+    return;
+  }
+
+  players.forEach((player) => {
+    io.to(player.id).emit("revail role", { role: player.role });
+  });
+
+  const shuffledRoles = shuffleArray(roles.slice(0, players.length));
+
+  playersWithRole[gameId] = [];
+
+  players.forEach((player, index) => {
+    const role = shuffledRoles[index];
+    playersWithRole[gameId].push({ ...player, role });
   });
 }
 
@@ -155,7 +179,7 @@ io.on("connection", (socket) => {
     io.emit("list games", Object.values(games));
   });
 
-  socket.on("start game", ({ gameId }) => {
+  socket.on("distribute roles", ({ gameId }) => {
     if (!games[gameId]) {
       return;
     }
@@ -168,6 +192,7 @@ io.on("connection", (socket) => {
     }
 
     assignRoles(games[gameId].players, gameId);
+    revailRole(gameId);
   });
 
   // Handle disconnection and remove empty rooms

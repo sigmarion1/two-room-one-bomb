@@ -1,16 +1,5 @@
 import React from 'react';
-import {
-  Box,
-  Button,
-  Heading,
-  SimpleGrid,
-  Flex,
-  Container,
-  useDisclosure,
-  Image,
-  Text,
-  Badge,
-} from '@chakra-ui/react';
+import { Box, Flex, Text, Badge } from '@chakra-ui/react';
 import Avatar, { genConfig } from 'react-nice-avatar';
 
 const PlayerListItem = ({ player, index }) => {
