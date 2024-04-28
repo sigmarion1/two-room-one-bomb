@@ -5,8 +5,8 @@ import Avatar, { genConfig } from 'react-nice-avatar';
 const PlayerListItem = ({ player, index }) => {
   const config = genConfig(player.name);
   return (
-    <Flex>
-      <Avatar style={{ width: '3rem', height: '3rem' }} {...config} />
+    <Flex p="2px">
+      <Avatar style={{ width: '2rem', height: '2rem' }} {...config} />
       <Box ml="3">
         <Text fontWeight="bold">
           {index + 1}. {player.name}
@@ -17,6 +17,9 @@ const PlayerListItem = ({ player, index }) => {
           )}
         </Text>
       </Box>
+      {/* <Box ml="auto" mr="10px">
+        <Text>{role}</Text>
+      </Box> */}
     </Flex>
   );
 };
