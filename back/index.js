@@ -1,4 +1,6 @@
 const express = require("express");
+const path = require("path");
+
 const http = require("http");
 const { v4: uuidv4 } = require("uuid");
 const socketIo = require("socket.io");
@@ -249,6 +251,14 @@ io.on("connection", (socket) => {
 
     io.emit("list games", Object.values(games));
   });
+});
+
+// Serve static files from the React app
+app.use(express.static(path.join(__dirname, "build")));
+
+// Handles any requests that don't match the ones above
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "build", "index.html"));
 });
 
 const PORT = process.env.PORT || 3000;
