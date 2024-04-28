@@ -1,5 +1,6 @@
 const express = require("express");
 const http = require("http");
+const { v4: uuidv4 } = require("uuid");
 const socketIo = require("socket.io");
 
 const app = express();
@@ -11,66 +12,80 @@ const io = socketIo(server, {
   },
 });
 
-app.use(express.static("public")); // Serve static files from public directory
-
-const roles = [
-  "President",
-  "Terrorist",
-  "CIA Agent",
-  "Collaborator",
-  "King",
-  "Resident",
-];
-let players = [];
+let games = {};
+let players = {};
 
 io.on("connection", (socket) => {
   console.log("A user connected", socket.id);
 
-  socket.on("new player", (name) => {
-    if (players.find((p) => p.id === socket.id)) {
-      console.log("Player already registered");
-    } else {
-      players.push({ id: socket.id, name: name, role: null });
-      console.log(`Player ${name} added to the game`);
-    }
-  });
-
-  socket.on("start game", () => {
-    if (players.length === 0) {
-      socket.emit("error", "No players in the game");
+  // Create a new room with a name
+  socket.on("create game", ({ playerName, gameName }) => {
+    if (!playerName.trim() || !gameName.trim()) {
+      socket.emit("error", "Player name and game name are required.");
       return;
     }
 
-    if (socket.id === players[0].id) {
-      // Check if the player who clicked is the first one joined
-      assignRoles();
-      io.emit("game started", players);
-      console.log("Game started: roles have been assigned");
+    const games = Array.from(socket.rooms);
+    if (games.length > 1) {
+      socket.emit("error", "You are already in a game.");
+      return;
+    }
+
+    const gameId = uuidv4();
+    games[gameId] = {
+      id: gameId,
+      name: gameName,
+      players: [{ id: socket.id, name: playerName, isAdmin: true }],
+    };
+    socket.join(gameId);
+    // socket.emit("game created", gameId);
+    socket.emit("join game", { gameId });
+    io.emit("list games", Object.values(games));
+    console.log("Game created", games[gameId]);
+  });
+
+  // Join an existing room with player name
+  socket.on("join game", ({ gameId, playerName }) => {
+    if (!playerName.trim()) {
+      socket.emit("error", "Player name is required.");
+      return;
+    }
+
+    const game = games[gameId];
+    if (game) {
+      game.players.push({ id: socket.id, name: playerName });
+      socket.join(gameId);
+      io.emit("list games", Object.values(games));
     } else {
-      socket.emit("error", "Only the first player can start the game");
+      socket.emit("error", "Game does not exist");
     }
   });
 
+  socket.on("leave game", (gameId) => {
+    let game = games[gameId];
+    if (game) {
+      game.players = game.players.filter((player) => player.id !== socket.id);
+      socket.leave(gameId);
+      // io.to(gameId).emit("update game", game); // Notify remaining players in the room
+      if (game.players.length === 0) {
+        delete games[gameId]; // Delete the room if no players are left
+      }
+      io.emit("list games", Object.values(games)); // Update the room list globally
+    }
+  });
+
+  // Handle disconnection and remove empty rooms
   socket.on("disconnect", () => {
-    players = players.filter((p) => p.id !== socket.id);
-    console.log("A user disconnected", socket.id);
+    Object.keys(games).forEach((gameId) => {
+      let game = games[gameId];
+      game.players = game.players.filter((player) => player.id !== socket.id);
+      if (game.players.length === 0) {
+        delete games[gameId];
+      }
+    });
+    io.emit("list games", Object.values(games));
   });
 });
-
-function assignRoles() {
-  const shuffledRoles = shuffleArray(roles.slice(0, players.length));
-  players.forEach((player, index) => {
-    player.role = shuffledRoles[index];
-  });
-}
-
-function shuffleArray(array) {
-  for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
-  }
-  return array;
-}
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
