@@ -8,6 +8,7 @@ import {
   Container,
   useDisclosure,
   Image,
+  keyframes,
 } from '@chakra-ui/react';
 import io from 'socket.io-client';
 import GameModal from './components/GameModal';
@@ -15,6 +16,11 @@ import PlayerListItem from './components/PlayerListItem';
 
 const socketUrl = process.env.REACT_APP_SOCKET_URL;
 const socket = socketUrl ? io(socketUrl) : io();
+const slideshow = keyframes`  
+  from {background-position: 0 0;}   
+  to {background-position: -10000px -6000px;}
+`;
+const slideShowAnimation = `${slideshow} infinite 360s linear`;
 
 function App() {
   const [playerName, setPlayerName] = useState('');
@@ -90,8 +96,29 @@ function App() {
 
   return (
     <>
-      <Flex minH="100vh" justify="center" bgColor={'red.600'}>
-        <Container boxShadow={'xl'} p={2} rounded={'xl'} bgColor={'white'}>
+      <Flex
+        minH="100vh"
+        justify="center"
+        bgColor={'red.600'}
+        bgImage={`radial-gradient(
+          circle at center,
+          rgba(255, 255, 255, 0.5) 0.1rem,
+          transparent 0
+        )`}
+        bgSize={'0.8rem 0.8rem'}
+        p={'1rem'}
+        py={'3rem'}
+        animation={slideShowAnimation}
+      >
+        <Container
+          boxShadow={'xl'}
+          p={2}
+          rounded={'xl'}
+          bgColor={'white'}
+          display={'flex'}
+          flexDirection={'column'}
+          justifyContent={'center'}
+        >
           <Image src="/logo.png" alt="logo" />
           {currentGame && (
             <Box textAlign="center" fontSize="xl">
